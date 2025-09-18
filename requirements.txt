@@ -1,0 +1,8 @@
+aiofiles
+aiohttp
+tqdm
+lxml
+requests
+PySocks
+pydantic
+pycryptodomex

@@ -1,0 +1,99 @@
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "streamlink",
+    "__init__.py",
+    "af_password.py",
+    "migrate_db.py",
+]
+
+line-length = 120
+indent-width = 4
+target-version = "py313"
+
+[lint]
+select = [
+  'A',  # flake8-builtins
+  'ASYNC', # https://docs.astral.sh/ruff/rules/#flake8-async-async
+  'B',  # flake8-bugbear
+  'BLE', # flake8-blind-except
+  'C4',  # unnecessary comprehensions, map()
+  #'COM',  # flake8-commas
+  'DTZ', # flake8-datetimez
+  'E',  # pycodestyle
+  'ERA',  # No commented out code
+  'EXE', # flake8-executable
+  'F',  # pyflakes
+  'FLY',  # flynt
+  #'G',  # flake8-logging-format
+  'I',  # isort
+  'ICN', # https://github.com/joaopalmeiro/flake8-import-conventions
+  'ISC', # https://pypi.org/project/flake8-implicit-str-concat/
+  #'LOG', # flake8-logging
+  'PERF', # perflint
+  'PIE', # https://pypi.org/project/flake8-pie/
+  'PLC',  # Pylint conventions
+  'PLE',  # Pylint error
+  'PLW',  # Pylint warnings
+  'PT',  # https://pypi.org/project/flake8-pytest-style/
+  'PTH',  # flake8 use pathlib
+  'RET', # https://pypi.org/project/flake8-return/
+  'RUF',  # Ruff rules
+  'S',  # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+  'SIM',  # https://pypi.org/project/flake8-simplify/
+  'T',  # flake8-debugger
+  'TRY',  # tryceratops
+  'UP',  # pyupgrade
+  'W',  # pycodestyle
+  #'ARG',  # flake8 unused arguments (not really helpful, unused func args are common and ok)
+  #'D',  # pydocstyle (too much)
+  #'N',  # pep8-naming (too opinionated)
+  #'NPY', # numpy
+  #'PD', # pandas
+  #'PL',  # Full Pylint (too much)
+  #'PLR',  # Pylint refactor (too much/too opinionated)
+]
+ignore = ["T201", "BLE001", "S104", "DTZ005", "DTZ006", "S105", "S311", "S608", "TRY002", "TRY003", "TRY300", "UP017"]
+fixable = ["ALL"]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
