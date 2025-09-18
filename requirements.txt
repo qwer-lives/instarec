@@ -1,0 +1,4 @@
+# Project dependencies for instarec
+
+aiohttp
+lxml
