@@ -1,16 +1,12 @@
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from time import gmtime, strftime
 
-from lxml import etree
-
-# --- Constants ---
-NS = {'mpd': 'urn:mpeg:dash:schema:mpd:2011'}
+from . import log
 
 
 def format_bandwidth(bw: str) -> str:
-    """Formats a bandwidth string into a human-readable format (kbps or Mbps)."""
     try:
         b = int(bw)
         if b > 1_000_000:
@@ -20,53 +16,54 @@ def format_bandwidth(bw: str) -> str:
         return "N/A"
 
 
-def get_next_pts_from_concatenated_file(file_path: Path, ffprobe_path: str) -> Optional[int]:
-    """
-    Uses ffprobe to get the duration_ts of a media file, which corresponds to the
-    't' value of the next segment.
-    """
-    log = logging.LoggerAdapter(logging.getLogger(), {'task_name': 'FFPROBE'})
+def format_duration(seconds: float) -> str:
+    seconds = int(seconds)
+    if seconds < 0:
+        return "[Invalid]"
+    if seconds >= 86400:
+        days = seconds // 86400
+        return f"{days} day(s) {strftime('%H:%M:%S', gmtime(seconds % 86400))}"
+    return strftime("%H:%M:%S", gmtime(seconds))
+
+
+def get_next_pts_from_concatenated_file(file_path: Path, ffprobe_path: str) -> int | None:
     if not file_path.exists() or file_path.stat().st_size == 0:
         return None
     try:
         command = [
-            ffprobe_path, '-v', 'error',
-            '-show_entries', 'stream=duration_ts',
-            '-of', 'default=nw=1:nk=1', str(file_path)
+            ffprobe_path,
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=duration_ts",
+            "-of",
+            "default=nw=1:nk=1",
+            str(file_path),
         ]
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
         return int(result.stdout.strip())
-    except (subprocess.CalledProcessError, ValueError) as e:
-        log.error(f"ffprobe failed for {file_path.name}. Error: {e}")
+    except (subprocess.CalledProcessError, ValueError):
+        log.FFPROBE.exception(f"ffprobe failed for {file_path.name}.")
         return None
 
 
-def select_representation(
-    root: etree._Element, media_type: str, preferred_ids: Optional[List[str]]
-) -> etree._Element:
-    """
-    Selects the best media representation from the MPD based on user preference
-    or highest bandwidth.
-    """
-    log = logging.LoggerAdapter(logging.getLogger(), {'task_name': 'INIT'})
-    media_name = media_type.split('/')[0]  # "video" or "audio"
-
-    xpath_query = f'//mpd:Representation[@mimeType="{media_type}"]'
-    all_reps = root.xpath(xpath_query, namespaces=NS)
-    if not all_reps:
-        raise ValueError(f"No representations found for mimeType '{media_type}'")
-
-    # Try to find a match from the preferred IDs list
-    if preferred_ids:
-        for rep_id in preferred_ids:
-            for rep in all_reps:
-                if rep.get('id') == rep_id:
-                    log.info(f"Found user-specified {media_name} representation: ID='{rep_id}', Bandwidth={rep.get('bandwidth')}")
-                    return rep
-        log.warning(f"None of the preferred {media_name} IDs found: {preferred_ids}. Falling back to highest bitrate.")
-
-    # Fallback: select the representation with the highest bandwidth
-    log.info(f"Selecting best {media_name} representation by highest bitrate.")
-    best_rep = max(all_reps, key=lambda r: int(r.get('bandwidth', 0)))
-    log.info(f"Selected {media_name} representation: ID='{best_rep.get('id')}', Bandwidth={best_rep.get('bandwidth')}")
-    return best_rep
+def get_video_duration(file_path: Path, ffprobe_path: str) -> float | None:
+    log = logging.LoggerAdapter(logging.getLogger(), {"task_name": "FFPROBE"})
+    if not file_path.exists() or file_path.stat().st_size == 0:
+        return None
+    try:
+        command = [
+            ffprobe_path,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(file_path),
+        ]
+        result = subprocess.run(command, check=True, capture_output=True, text=True)  # noqa: S603
+        return float(result.stdout.strip())
+    except (subprocess.CalledProcessError, ValueError):
+        log.FFPROBE.exception(f"ffprobe failed to get duration for {file_path.name}.")
+        return None

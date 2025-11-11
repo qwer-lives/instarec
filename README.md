@@ -1,69 +1,81 @@
-# instarec - MPEG-DASH Stream Recorder
+# InstaRec: Instagram Live Stream Downloader
 
-`instarec` is a Python-based command-line tool for downloading MPEG-DASH livestreams. It is designed to capture not only the live portion of a stream but also all available past segments, allowing you to record an entire event from its very beginning.
+**InstaRec** is a powerful command-line tool designed specifically to download Instagram Live streams. It captures the entire broadcast, including all available past segments from the beginning of the stream, and continues to record the live feed until it ends.
 
-It uses asynchronous requests for high-performance downloading and relies on FFmpeg for the final media merging process.
+**Disclaimer:** This tool is tailored exclusively for the MPEG-DASH streams used by Instagram Live. It is **not** a generic DASH downloader and will likely fail if used with other services (like YouTube or Twitch), as it relies on the specific structure and headers of Instagram's manifests.
 
 ## Features
 
 -   **Full Stream Archive**: Downloads all available historical segments in addition to the live stream.
 -   **Interactive Mode**: Lets you choose from available video and audio quality streams.
---   **High Performance**: Utilizes `asyncio` and `aiohttp` for efficient, non-blocking downloads.
+-   **High Performance**: Utilizes `asyncio` and `aiohttp` for efficient, non-blocking downloads.
 -   **Robust Error Handling**: Implements retries with exponential backoff for failed downloads.
 -   **Customizable**: Offers a wide range of command-line options to control network settings, stream logic, and output.
 -   **Standalone**: Relies on FFmpeg but is otherwise a self-contained Python script.
 
-## Prerequisites
+## Requirements
 
--   Python 3.7+
--   **FFmpeg** and **ffprobe**: These must be installed on your system and available in your system's PATH, or you must provide the path to the executables via command-line arguments.
+1.  **Python 3.8+**
+2.  **FFmpeg and ffprobe:** These must be installed on your system and accessible in your system's PATH. FFmpeg is used for merging the final video file, and ffprobe is used to determine the timeline of past segments.
+3.  **Python Libraries:** The tool depends on `aiofiles`, `aiohttp` and `lxml`.
 
 ## Installation
 
 1.  **Clone the repository:**
-    ```sh
+    ```bash
     git clone <your-repository-url>
     cd instarec
     ```
 
-2.  **Install dependencies:**
-    The script relies on `aiohttp` and `lxml`. You can install them using pip.
-    ```sh
-    pip install aiohttp lxml
+2.  **Install the required Python packages:**
+    ```bash
+    pip install -r requirements.txt
     ```
 
-## Usage
+## How to Use
 
-The basic command requires the MPD manifest URL and an output file path.
+### 1. Getting the MPD URL
 
-```sh
-python main.py <mpd_url> <output_path>
+You need to manually obtain the manifest URL (`.mpd`) for the Instagram Live stream.
+
+1.  Open the Instagram Live stream in a web browser (e.g., Chrome, Firefox).
+2.  Open the **Developer Tools** (usually by pressing `F12` or `Ctrl+Shift+I`).
+3.  Go to the **Network** tab.
+4.  In the filter box, type `.mpd` to filter the network requests.
+5.  You should see a request for a file ending in `.mpd`. Right-click on it and copy the full URL.
+
+### 2. Running the Downloader
+
+The basic command structure is:
+
+```bash
+python instarec.py [options] <mpd_url> <output_filepath>
 ```
 
-### Examples
+#### **Example: Basic Download**
 
-**Basic Recording**
-Records the stream with the highest available quality.
-```sh
-python main.py "https://example.com/stream.mpd" "archive.mp4"
+Downloads the stream using the highest available quality and saves it as `output.mkv`.
+
+```bash
+python instarec.py "https://your-copied-mpd-url/live.mpd?..." "stream_archive.mkv"
 ```
 
-**Interactive Quality Selection**
-Use the `-i` flag to get a list of available video and audio streams to choose from.
-```sh
-python main.py -i "https://example.com/stream.mpd" "archive.mkv"
+#### **Example: Interactive Mode**
+
+It will first fetch all available stream qualities and prompt you to select the ones you want.
+
+```bash
+python instarec.py -i "https://your-copied-mpd-url/live.mpd?..." "stream_archive.mp4"
 ```
 
-**Recording Live Segments Only**
-To skip past segments and start recording from the live edge, use `--no-past`.
-```sh
-python main.py --no-past "https://example.com/stream.mpd" "live_recording.mp4"
-```
+You will see a menu like this:
 
-**Keeping Temporary Files**
-To inspect the downloaded segments, you can prevent the script from deleting the temporary `.segments` directory upon completion.
-```sh
-python main.py --keep-segments "https://example.com/stream.mpd" "archive.mp4"
+```
+--- Available Video Streams ---
+[1] ID: 720_0 | Resolution: 720x1280 | Bandwidth: 2.31 Mbps | Codecs: avc1.4D401F
+[2] ID: 480_0 | Resolution: 480x854  | Bandwidth: 921.6 kbps | Codecs: avc1.4D401F
+...
+Select a video stream (enter number, press Enter for best):
 ```
 
 ### Command-Line Arguments
