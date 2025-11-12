@@ -7,7 +7,7 @@
 - **Download from MPD or Username**: Start a download using either a direct MPD manifest URL or an Instagram username.
 - **Interactive Quality Selection**: Interactively choose from available video and audio stream qualities.
 - **Past and Live Recording**: Downloads both previously broadcasted segments and continues to record the livestream.
-- **Optiimized**: No exhaustive search except when needed (a segment is lost), merge of segments is performed as livestream is diwonloaded. 
+- **Optimized**: No exhaustive search except when needed (a segment is lost), merge of segments is performed as livestream is diwonloaded. 
 - **Segment Loss Detection**: Generates a summary file detailing any missing segments from the download.
 - **Customizable**: Offers a wide range of command-line arguments to tailor the downloading process.
 
