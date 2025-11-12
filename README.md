@@ -13,6 +13,8 @@
 
 ## Setup and Installation
 
+`ffmpeg` and `ffprobe` are required. If their explicit path is not provided as an argument, it will be assumed that they are in yout `PATH`.
+
 ### Basic Setup (MPD URL only)
 
 For downloading directly from an MPD manifest URL, you only need to install the Python dependencies listed in `requirements.txt`.
