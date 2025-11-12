@@ -19,7 +19,7 @@ For downloading directly from an MPD manifest URL, you only need to install the 
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository_url>
+    git clone "https://github.com/qwer-lives/instarec.git"
     cd instarec
     ```
 
