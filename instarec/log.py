@@ -8,6 +8,7 @@ class _TaskLogger(logging.LoggerAdapter):
 
 MAIN = _TaskLogger("MAIN")
 INIT = _TaskLogger("INIT")
+API = _TaskLogger("API")
 MPD = _TaskLogger("MPD")
 PAST = _TaskLogger("PAST")
 SEARCH = _TaskLogger("SEARCH")

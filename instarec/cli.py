@@ -27,10 +27,13 @@ class TaskNameFilter(logging.Filter):
 
 def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Download an MPEG-DASH livestream, including all past segments.",
+        description="Download Instagram live streams.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("mpd_url", help="The URL of the .mpd manifest.")
+    parser.add_argument(
+        "url_or_username",
+        help="The URL of the .mpd manifest OR a raw Instagram username (e.g., 'nasa').",
+    )
     parser.add_argument(
         "output_path",
         help="The destination filepath for the final video, including extension (e.g., video.mkv, video.mp4).",
@@ -42,6 +45,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     log_group = parser.add_argument_group("Logging")
     log_group.add_argument("--log-file", help="Path to a file to write logs to.")
+    log_group.add_argument("--summary-file", help="Path to a file to write a download summary to.")
     verbosity_group = log_group.add_mutually_exclusive_group()
     verbosity_group.add_argument("-v", "--verbose", action="store_true", help="Enable verbose (DEBUG level) logging.")
     verbosity_group.add_argument(
@@ -91,6 +95,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     stream_group = parser.add_argument_group("Stream Logic")
     stream_group.add_argument(
+        "--no-past", action="store_true", help="Do not download past segments, start with the live stream."
+    )
+    stream_group.add_argument(
         "--end-stream-miss-threshold",
         type=int,
         default=30000,
@@ -109,9 +116,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
         help="Seconds to wait without a new live segment before assuming the stream has ended.",
     )
     stream_group.add_argument(
-        "--no-past", action="store_true", help="Do not download past segments, start with the live stream."
-    )
-    stream_group.add_argument(
         "--past-segment-delay",
         type=float,
         default=0.5,
@@ -119,7 +123,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
 
     output_group = parser.add_argument_group("Output Settings")
-    output_group.add_argument("--summary-file", help="Path to a file to write a download summary to.")
     output_group.add_argument(
         "--keep-segments", action="store_true", help="Do not delete the temporary segments directory after finishing."
     )
@@ -148,10 +151,14 @@ def configure_logging(args: argparse.Namespace):
         level=log_level, format="%(asctime)s - %(levelname)s - [%(task_name)s] - %(message)s", handlers=log_handlers
     )
 
+    if not args.verbose:
+        logging.getLogger("instagrapi").setLevel(logging.WARNING)
+        logging.getLogger("private_request").setLevel(logging.WARNING)
+
 
 async def main(args: argparse.Namespace) -> None:
     downloader = StreamDownloader(
-        mpd_url=args.mpd_url,
+        mpd_url=args.url_or_username,
         output_path_str=args.output_path,
         summary_file_path=args.summary_file,
         poll_interval=args.poll_interval,
