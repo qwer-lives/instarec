@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instarec"
+version = "1.0.0"
+authors = [
+  { name="qwer-lives", email="primary@qwerlives.com" },
+]
+description = "A tool to download Instagram live streams."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "GPL-3.0-or-later"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Video :: Capture",
+]
+dependencies = [
+    "aiohttp",
+    "aiofiles",
+    "lxml",
+    "tqdm",
+    "platformdirs"
+]
+
+[project.scripts]
+instarec = "instarec.cli:main_entry"
+
+[tool.setuptools]
+packages = ["instarec"]

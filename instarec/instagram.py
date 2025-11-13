@@ -3,6 +3,7 @@ from pathlib import Path
 
 from instagrapi import Client
 from instagrapi.exceptions import ClientNotFoundError, LoginRequired, PrivateError, UserNotFound
+from platformdirs import user_config_path
 
 from . import log
 
@@ -12,26 +13,30 @@ class UserNotLiveError(Exception):
 
 
 class InstagramClient:
-    def __init__(self, config_dir: Path):
+    def __init__(self):
         self.client = Client()
-        self.config_dir = config_dir
+        self.config_dir = user_config_path("instarec", "instarec")
         self.credentials_file_path = self.config_dir / "credentials.json"
         self.session_file_path = self.config_dir / "session.json"
         self.username, self.password = self._load_credentials()
 
+    def _raise_value_error_exception(self, msg):
+        raise ValueError(msg)
+
     def _load_credentials(self) -> tuple[str, str]:
+        self.config_dir.mkdir(parents=True, exist_ok=True)
         try:
             with self.credentials_file_path.open("r", encoding="utf-8") as f:
                 creds = json.load(f)
             username = creds.get("username")
             password = creds.get("password")
             if not username or not password:
-                raise ValueError("'username' and/or 'password' not found in credentials file.")
+                self._raise_value_error_exception("'username' and/or 'password' not found in credentials file.")
             return username, password
         except FileNotFoundError as e:
             log.API.critical(f"Credentials file not found at: {self.credentials_file_path}")
             raise FileNotFoundError(
-                "Please create a 'credentials.json' file in the 'config' directory with your "
+                f"Please create a 'credentials.json' file at '{self.credentials_file_path}' with your "
                 "Instagram username and password.\n\n"
                 "Example format:\n"
                 '{\n  "username": "your_instagram_username",\n  "password": "your_instagram_password"\n}'

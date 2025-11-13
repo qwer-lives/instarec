@@ -1,9 +1,21 @@
 import argparse
 import logging
+import sys
+import asyncio
+from pathlib import Path
 
 from tqdm import tqdm
 
+if __name__ == "__main__" and __package__ is None:
+    project_root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(project_root))
+    from instarec import cli  # noqa: PLC0415
+
+    sys.exit(cli.main_entry())
+
 from .downloader import StreamDownloader
+from . import log
+from .interactive import interactive_stream_selection
 
 
 class TqdmStreamHandler(logging.StreamHandler):
@@ -32,7 +44,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "url_or_username",
-        help="The URL of the .mpd manifest OR a raw Instagram username (e.g., 'nasa').",
+        help="The URL of the .mpd manifest OR a raw Instagram username (instagrapi is needed for usernames).",
     )
     parser.add_argument(
         "output_path",
@@ -178,3 +190,55 @@ async def main(args: argparse.Namespace) -> None:
         preferred_audio_ids=args.audio_quality,
     )
     await downloader.run()
+
+
+def main_entry():
+    parser = get_argument_parser()
+    args = parser.parse_args()
+
+    configure_logging(args)
+
+    if not Path(args.output_path).suffix:
+        args.output_path += ".mkv"
+        log.MAIN.info(f"No output file extension provided. Defaulting to: {args.output_path}")
+
+    input_value = args.url_or_username
+    mpd_url = ""
+
+    if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
+        mpd_url = input_value
+    else:
+        try:
+            from . import instagram  # noqa: PLC0415
+
+            log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
+            client = instagram.InstagramClient()
+            mpd_url = client.get_live_mpd_url(input_value)
+        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound) as e:
+            log.MAIN.error(f"Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            log.MAIN.error(f"An unexpected error occurred during Instagram lookup: {e}")
+            sys.exit(1)
+
+    if args.interactive:
+        try:
+            selections = asyncio.run(interactive_stream_selection(mpd_url))
+            args.video_quality = [selections["video_id"]]
+            if selections["audio_id"]:
+                args.audio_quality = [selections["audio_id"]]
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            log.MAIN.warning("Stream selection cancelled by user.")
+            sys.exit(0)
+        except Exception as e:
+            log.MAIN.error(f"Failed to fetch streams for interactive selection: {e}")
+            sys.exit(1)
+
+    args.url_or_username = mpd_url
+
+    try:
+        asyncio.run(main(args))
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        log.MAIN.warning("Download interrupted by user.")
+    except Exception as e:
+        log.MAIN.error(f"A critical error occurred: {e}", exc_info=True)
