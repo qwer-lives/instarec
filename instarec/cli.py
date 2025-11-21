@@ -2,6 +2,7 @@ import argparse
 import logging
 import sys
 import asyncio
+from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 
 from tqdm import tqdm
@@ -42,6 +43,14 @@ def get_argument_parser() -> argparse.ArgumentParser:
         description="Download Instagram live streams.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+
+    try:
+        app_version = version("instarec")
+    except PackageNotFoundError:
+        app_version = "unknown"
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {app_version}")
+
     parser.add_argument(
         "url_or_username",
         help="The URL of the .mpd manifest OR a raw Instagram username (instagrapi is needed for usernames).",
