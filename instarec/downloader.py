@@ -4,6 +4,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import aiohttp
+from aiohttp_socks import ProxyConnector
 
 from . import io, live, log, loss_check, merger, mpd, past
 
@@ -19,6 +20,7 @@ class StreamDownloader:
         download_retries: int,
         download_retry_delay: float,
         check_url_retries: int,
+        proxy: str | None,
         end_stream_miss_threshold: int,
         search_chunk_size: int,
         live_end_timeout: float,
@@ -41,6 +43,7 @@ class StreamDownloader:
         self.download_retries = download_retries
         self.download_retry_delay = download_retry_delay
         self.check_url_retries = check_url_retries
+        self.proxy = proxy
         self.end_stream_miss_threshold = end_stream_miss_threshold
         self.search_chunk_size = search_chunk_size
         self.live_end_timeout = live_end_timeout
@@ -69,7 +72,12 @@ class StreamDownloader:
         log.MAIN.debug(f"Temporary files will be stored in: {self.segments_dir}")
         log.MAIN.debug(f"Final output file will be: {self.output_path}")
 
-        async with aiohttp.ClientSession() as session:
+        connector = None
+        if self.proxy:
+            connector = ProxyConnector.from_url(self.proxy)
+            log.MAIN.debug(f"aiohttp proxy set: {self.proxy}")
+
+        async with aiohttp.ClientSession(connector=connector) as session:
             self.session = session
             try:
                 await self._fetch_initial_mpd()

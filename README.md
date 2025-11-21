@@ -107,6 +107,7 @@ If you prefer not to use your credentials, you can manually find the manifest UR
 | `--download-retries`          |       | Number of retries for a failed segment download.                                               |
 | `--download-retry-delay`      |       | Initial delay in seconds between download retries.                                             |
 | `--check-url-retries`         |       | Number of retries for a failed URL check.                                                      |
+| `--proxy`                     |       | Proxy URL (e.g. http://user:pass@host:port or socks5://host:port).                             |
 | `--no-past`                   |       | Do not download past segments, start with the livestream.                                      |
 | `--end-stream-miss-threshold` |       | Number of consecutive timestamps to search before assuming the past stream has ended.          |
 | `--search-chunk-size`         |       | Number of segments to check for existence in a single batch when searching.                    |

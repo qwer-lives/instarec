@@ -1,4 +1,6 @@
+aiohttp-socks
 aiofiles
 aiohttp
+PySocks
 tqdm
 lxml

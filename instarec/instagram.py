@@ -13,8 +13,11 @@ class UserNotLiveError(Exception):
 
 
 class InstagramClient:
-    def __init__(self):
+    def __init__(self, proxy: str | None = None):
         self.client = Client()
+        if proxy:
+            self.client.set_proxy(proxy)
+            log.API.debug(f"Instagrapi proxy set: {proxy}")
         self.config_dir = user_config_path("instarec", "instarec")
         self.credentials_file_path = self.config_dir / "credentials.json"
         self.session_file_path = self.config_dir / "session.json"

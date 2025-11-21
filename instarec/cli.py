@@ -104,6 +104,12 @@ def get_argument_parser() -> argparse.ArgumentParser:
     net_group.add_argument(
         "--check-url-retries", type=int, default=3, help="Number of retries for a failed URL check (HEAD request)."
     )
+    net_group.add_argument(
+        "--proxy",
+        type=str,
+        default=None,
+        help="Proxy URL (e.g. http://user:pass@host:port or socks5://host:port).",
+    )
 
     stream_group = parser.add_argument_group("Stream Logic")
     stream_group.add_argument(
@@ -130,7 +136,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     stream_group.add_argument(
         "--past-segment-delay",
         type=float,
-        default=0.5,
+        default=0.1,
         help="Minimum time in seconds between the start of each past segment download.",
     )
 
@@ -178,6 +184,7 @@ async def main(args: argparse.Namespace) -> None:
         download_retries=args.download_retries,
         download_retry_delay=args.download_retry_delay,
         check_url_retries=args.check_url_retries,
+        proxy=args.proxy,
         end_stream_miss_threshold=args.end_stream_miss_threshold,
         search_chunk_size=args.search_chunk_size,
         live_end_timeout=args.live_end_timeout,
@@ -212,7 +219,7 @@ def main_entry():
             from . import instagram  # noqa: PLC0415
 
             log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
-            client = instagram.InstagramClient()
+            client = instagram.InstagramClient(proxy=args.proxy)
             mpd_url = client.get_live_mpd_url(input_value)
         except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound) as e:
             log.MAIN.error(f"Error: {e}")
