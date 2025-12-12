@@ -67,6 +67,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     log_group = parser.add_argument_group("Logging")
     log_group.add_argument("--log-file", help="Path to a file to write logs to.")
     log_group.add_argument("--summary-file", help="Path to a file to write a download summary to.")
+    log_group.add_argument("--summary-file-korean", help="Path to a file to write a Korean download summary to.")
     verbosity_group = log_group.add_mutually_exclusive_group()
     verbosity_group.add_argument("-v", "--verbose", action="store_true", help="Enable verbose (DEBUG level) logging.")
     verbosity_group.add_argument(
@@ -188,6 +189,7 @@ async def main(args: argparse.Namespace) -> None:
         mpd_url=args.url_or_username,
         output_path_str=args.output_path,
         summary_file_path=args.summary_file,
+        summary_file_korean_path=args.summary_file_korean,
         poll_interval=args.poll_interval,
         max_search_requests=args.max_search_requests,
         download_retries=args.download_retries,

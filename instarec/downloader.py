@@ -15,6 +15,7 @@ class StreamDownloader:
         mpd_url: str,
         output_path_str: str,
         summary_file_path: str,
+        summary_file_korean_path: str | None,
         poll_interval: float,
         max_search_requests: int,
         download_retries: int,
@@ -36,6 +37,7 @@ class StreamDownloader:
         self.base_url = mpd_url.rsplit("/", 1)[0] + "/"
         self.output_path = Path(output_path_str)
         self.summary_file_path = Path(summary_file_path) if summary_file_path else None
+        self.summary_file_korean_path = Path(summary_file_korean_path) if summary_file_korean_path else None
         self.segments_dir = self.output_path.with_suffix(self.output_path.suffix + ".segments")
 
         self.poll_interval = poll_interval
@@ -97,6 +99,8 @@ class StreamDownloader:
                 merger.finalize_video(self)
                 if self.summary_file_path:
                     loss_check.create_summary_file(self)
+                if self.summary_file_korean_path:
+                    loss_check.create_korean_summary_file(self)
 
     def _raise_value_error(self, msg: str) -> None:
         raise ValueError(msg)
