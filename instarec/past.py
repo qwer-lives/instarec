@@ -94,6 +94,9 @@ async def download_past_segments(downloader: "StreamDownloader"):
                 downloader, current_t, downloader.video_past_path, downloader.audio_past_path, log.PAST
             )
             if was_successful:
+                if downloader.first_segment_t is None or current_t < downloader.first_segment_t:
+                    downloader.first_segment_t = current_t
+
                 next_t = get_next_pts_from_concatenated_file(downloader.video_past_path, downloader.ffprobe_path)
                 if next_t is not None:
                     progress_bar.update(next_t - current_t)

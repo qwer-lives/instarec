@@ -1,4 +1,4 @@
-aiohttp-socks
+aiohttp_socks
 aiofiles
 aiohttp
 PySocks
