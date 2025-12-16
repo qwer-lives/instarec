@@ -36,9 +36,9 @@ class StreamDownloader:
         self.mpd_url = mpd_url
         self.base_url = mpd_url.rsplit("/", 1)[0] + "/"
         self.output_path = Path(output_path_str)
+        self.segments_dir = self.output_path.with_name(self.output_path.stem + "_segments")
         self.summary_file_path = Path(summary_file_path) if summary_file_path else None
         self.summary_file_korean_path = Path(summary_file_korean_path) if summary_file_korean_path else None
-        self.segments_dir = self.output_path.with_suffix(self.output_path.suffix + ".segments")
 
         self.poll_interval = poll_interval
         self.max_search_requests = max_search_requests
@@ -57,6 +57,8 @@ class StreamDownloader:
         self.preferred_video_ids = preferred_video_ids
         self.preferred_audio_ids = preferred_audio_ids
 
+        self.video_init_path = self.segments_dir / "video_init.tmp"
+        self.audio_init_path = self.segments_dir / "audio_init.tmp"
         self.video_past_path = self.segments_dir / "video_past.tmp"
         self.audio_past_path = self.segments_dir / "audio_past.tmp"
         self.video_live_path = self.segments_dir / "video_live.tmp"
@@ -128,10 +130,16 @@ class StreamDownloader:
         log.INIT.info("Downloading initialization segments...")
         downloads = await asyncio.gather(
             io.download_file(
-                self, urljoin(self.base_url, self.stream_info["video"]["init"]), self.video_past_path, log.INIT
+                self,
+                urljoin(self.base_url, self.stream_info["video"]["init"]),
+                [self.video_init_path, self.video_past_path],
+                log.INIT,
             ),
             io.download_file(
-                self, urljoin(self.base_url, self.stream_info["audio"]["init"]), self.audio_past_path, log.INIT
+                self,
+                urljoin(self.base_url, self.stream_info["audio"]["init"]),
+                [self.audio_init_path, self.audio_past_path],
+                log.INIT,
             ),
         )
         if not all(downloads):

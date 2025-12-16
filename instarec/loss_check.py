@@ -64,13 +64,13 @@ def _generate_summary_content(downloader: "StreamDownloader", lang: str) -> list
     missing_segments = sorted(downloader.missing_segment_timestamps)
     miss_count = len(missing_segments)
     loss_percent = (miss_count / total_expected * 100) if total_expected > 0 else 0
-    
+
     segment_range = f"0 ~ {total_expected - 1}" if total_expected > 0 else "0 ~ 0"
-    
+
     content.append(f"- {labels['segments']} : {segment_range} ({total_expected})\n")
     content.append(f"- {labels['loss']}   : {miss_count}/{total_expected} ({loss_percent:.2f}%)\n")
     content.append(f"- {labels['missing']}   : {missing_segments}\n\n")
-    
+
     return content
 
 

@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from instagrapi import Client
 from instagrapi.exceptions import ClientNotFoundError, LoginRequired, PrivateError, UserNotFound

@@ -1,8 +1,8 @@
 import argparse
+import asyncio
 import logging
 import sys
-import asyncio
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from tqdm import tqdm
@@ -10,12 +10,12 @@ from tqdm import tqdm
 if __name__ == "__main__" and __package__ is None:
     project_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(project_root))
-    from instarec import cli  # noqa: PLC0415
+    from instarec import cli
 
     sys.exit(cli.main_entry())
 
-from .downloader import StreamDownloader
 from . import log
+from .downloader import StreamDownloader
 from .interactive import interactive_stream_selection
 
 

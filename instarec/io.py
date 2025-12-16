@@ -45,14 +45,18 @@ async def fetch_url_content(
     return None, None
 
 
-async def download_file(downloader: "StreamDownloader", url: str, path: Path, log: logging.LoggerAdapter) -> bool:
+async def download_file(
+    downloader: "StreamDownloader", url: str, path: Path | list[Path], log: logging.LoggerAdapter
+) -> bool:
     content, _ = await fetch_url_content(
         downloader.session, url, downloader.download_retries, downloader.download_retry_delay, log
     )
     if content:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(path, "wb") as f:
-            await f.write(content)
+        paths = path if isinstance(path, list) else [path]
+        for p in paths:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            async with aiofiles.open(p, "wb") as f:
+                await f.write(content)
         return True
     return False
 
