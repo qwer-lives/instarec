@@ -57,8 +57,6 @@ class StreamDownloader:
         self.preferred_video_ids = preferred_video_ids
         self.preferred_audio_ids = preferred_audio_ids
 
-        self.video_init_path = self.segments_dir / "video_init.tmp"
-        self.audio_init_path = self.segments_dir / "audio_init.tmp"
         self.video_past_path = self.segments_dir / "video_past.tmp"
         self.audio_past_path = self.segments_dir / "audio_past.tmp"
         self.video_live_path = self.segments_dir / "video_live.tmp"
@@ -130,16 +128,10 @@ class StreamDownloader:
         log.INIT.info("Downloading initialization segments...")
         downloads = await asyncio.gather(
             io.download_file(
-                self,
-                urljoin(self.base_url, self.stream_info["video"]["init"]),
-                [self.video_init_path, self.video_past_path],
-                log.INIT,
+                self, urljoin(self.base_url, self.stream_info["video"]["init"]), self.video_past_path, log.INIT
             ),
             io.download_file(
-                self,
-                urljoin(self.base_url, self.stream_info["audio"]["init"]),
-                [self.audio_init_path, self.audio_past_path],
-                log.INIT,
+                self, urljoin(self.base_url, self.stream_info["audio"]["init"]), self.audio_past_path, log.INIT
             ),
         )
         if not all(downloads):
