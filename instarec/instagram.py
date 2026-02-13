@@ -82,7 +82,7 @@ class InstagramClient:
             log.API.error(f"Could not MPD for user id'{user_id}': {e}")
             raise
 
-    def get_live_mpd_url(self, target_username: str) -> str:
+    def get_mpd_from_username(self, target_username: str) -> str:
         try:
             user_data = self.client.private_request(f"users/web_profile_info/?username={target_username}")
         except ClientNotFoundError as e:
@@ -96,4 +96,14 @@ class InstagramClient:
             raise UserNotLiveError(f"User '{target_username}' appears to be live, but no MPD URL was found.")
 
         log.API.info(f"Found live stream for '{target_username}': {mpd_url}")
+        return mpd_url
+
+    def get_mpd_from_user_id(self, user_id: str) -> str:
+
+        log.API.debug(f"Checking live status for user ID: {user_id}...")
+        mpd_url = self._login_and_get_mpd(user_id)
+        if not mpd_url:
+            raise UserNotLiveError(f"User with ID {user_id} appears to be live, but no MPD URL was found.")
+
+        log.API.info(f"Found live stream for user with ID '{user_id}': {mpd_url}")
         return mpd_url
