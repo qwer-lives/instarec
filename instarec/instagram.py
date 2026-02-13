@@ -99,7 +99,6 @@ class InstagramClient:
         return mpd_url
 
     def get_mpd_from_user_id(self, user_id: str) -> str:
-
         log.API.debug(f"Checking live status for user ID: {user_id}...")
         mpd_url = self._login_and_get_mpd(user_id)
         if not mpd_url:
