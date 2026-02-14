@@ -93,7 +93,7 @@ If you prefer not to use your credentials, you can manually find the manifest UR
 
 | Argument                      | Short | Description                                                                                    |
 | ----------------------------- | ----- | ---------------------------------------------------------------------------------------------- |
-| `url_or_username`             |       | The URL of the .mpd manifest OR a raw Instagram username.                                      |
+| `url_or_username`             |       | The URL of the .mpd manifest, a raw Instagram username, or a raw instagram user ID.            |
 | `output_path`                 |       | The destination filepath for the final video. Defaults to `.mkv` if no extension is provided.  |
 | `--interactive`               | `-i`  | Interactively select video and audio quality.                                                  |
 | `--log-file`                  |       | Path to a file to write logs to.                                                               |

@@ -53,7 +53,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "url_or_username",
-        help="The URL of the .mpd manifest OR a raw Instagram username (instagrapi is needed for usernames).",
+        help="The URL of the .mpd manifest, a raw Instagram username, or a raw Instagram user ID (instagrapi is needed for usernames and IDs).",
     )
     parser.add_argument(
         "output_path",
@@ -220,7 +220,7 @@ def main_entry():
         args.output_path += ".mkv"
         log.MAIN.info(f"No output file extension provided. Defaulting to: {args.output_path}")
 
-    input_value = args.url_or_username
+    input_value: str = args.url_or_username
     mpd_url = ""
 
     if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
@@ -229,9 +229,14 @@ def main_entry():
         try:
             from . import instagram  # noqa: PLC0415
 
-            log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
-            client = instagram.InstagramClient(proxy=args.proxy)
-            mpd_url = client.get_live_mpd_url(input_value)
+            if input_value.isdigit():
+                log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
+                client = instagram.InstagramClient(proxy=args.proxy)
+                mpd_url = client.get_mpd_from_user_id(input_value)
+            else:
+                log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
+                client = instagram.InstagramClient(proxy=args.proxy)
+                mpd_url = client.get_mpd_from_username(input_value)
         except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound) as e:
             log.MAIN.error(f"Error: {e}")
             sys.exit(1)
