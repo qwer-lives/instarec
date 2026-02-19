@@ -54,12 +54,12 @@ instarec <mpd_url> my_video.mkv
     instarec <mpd_url> my_video.mkv -i
     ```
 
--   **Mux to MP4 instead of MKV:**
+-   **Download from an MPD URL with the best available quality and mux to MP4:**
     ```bash
     instarec <mpd_url> my_video.mp4
     ```
 
--   **With specific video/audio quality and a summary file:**
+-   **Download with specific video/audio quality and create a summary file:**
     ```bash
     instarec <mpd_url> my_video.mkv --video-quality <video_id> --summary-file summary.txt
     ```

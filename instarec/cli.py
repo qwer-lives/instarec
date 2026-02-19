@@ -258,7 +258,7 @@ def main_entry():
                     config_dir=config_dir,
                 )
             else:
-                # Legacy: instagrapi only (credentials.json)
+                # instagrapi only (credentials.json)
                 if input_value.isdigit():
                     log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
                     client = instagram.InstagramClient(proxy=args.proxy)
