@@ -53,7 +53,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "url_or_username",
-        help="The URL of the .mpd manifest, a raw Instagram username, or a raw Instagram user ID.",
+        help="The URL of the .mpd manifest, a raw Instagram username, or a raw Instagram user ID (instagrapi is needed for usernames and IDs).",
     )
     parser.add_argument(
         "output_path",

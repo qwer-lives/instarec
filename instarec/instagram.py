@@ -1,5 +1,6 @@
 import json
 import time
+import http.cookiejar
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 
@@ -36,8 +37,6 @@ class CookieClient:
     Authenticates with Instagram using a Netscape-format cookie file (.txt)
     and queries the Instagram web API directly (no instagrapi required).
 
-    If the cookie file is valid, it is also saved as a pickled requests.Session
-    so that subsequent runs can reuse it without re-reading the cookie file.
     """
 
     def __init__(self, cookie_file: str | Path, proxy: str | None = None):
@@ -122,9 +121,20 @@ class CookieClient:
                 f"Instagram API returned unexpected status {resp.status_code} for endpoint '{endpoint}'."
             )
 
+        # A redirect to the login page returns 200 HTML — detect it before trying JSON.
+        content_type = resp.headers.get("Content-Type", "")
+        if "text/html" in content_type or resp.text.lstrip().startswith("<!DOCTYPE"):
+            log.API.debug(f"Raw response (status {resp.status_code}): {resp.text[:500]!r}")
+            raise CookieAuthError(
+                "Instagram redirected to the login page instead of returning API data. "
+                "Your cookies are likely expired or invalid. "
+                "Please export fresh cookies and try again."
+            )
+
         try:
             return resp.json()
         except ValueError as e:
+            log.API.debug(f"Raw response (status {resp.status_code}): {resp.text[:500]!r}")
             raise CookieAuthError(f"Could not parse Instagram API response as JSON: {e}") from e
 
     def _get_user_id_from_username(self, username: str) -> str:
@@ -324,8 +334,6 @@ def _try_export_cookies_from_instagrapi(
     as a Netscape cookie file so they can be used for cookie-based auth next time.
     """
     try:
-        import http.cookiejar
-
         settings = ig_client.client.get_settings()
         raw_cookies = settings.get("cookies", {})
         if not raw_cookies:
