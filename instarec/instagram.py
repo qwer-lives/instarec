@@ -112,6 +112,11 @@ class CookieClient:
                 "Instagram returned 403 Forbidden. "
                 "Your cookies may be invalid or your account may be restricted."
             )
+        if resp.status_code == 404:
+            raise UserNotLiveError(
+                f"Instagram returned 404 for endpoint '{endpoint}'. "
+                "The user is likely not live."
+            )
         if resp.status_code != 200:
             raise CookieAuthError(
                 f"Instagram API returned unexpected status {resp.status_code} for endpoint '{endpoint}'."

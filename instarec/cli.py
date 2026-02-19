@@ -70,11 +70,12 @@ def get_argument_parser() -> argparse.ArgumentParser:
         metavar="COOKIES_FILE",
         help=(
             "Path to a Netscape-format cookie file (.txt) for Instagram authentication. "
-            "This is the recommended login method. Export cookies from your browser while "
-            "logged into Instagram (e.g. using the 'Get cookies.txt LOCALLY' extension). "
-            "If cookie auth fails, instarec will automatically fall back to "
-            "credentials.json (instagrapi). On a successful fallback login, fresh cookies "
-            "will be saved to the specified path for reuse next time."
+            "Export cookies from your browser while logged into Instagram (e.g. using the "
+            "'Get cookies.txt LOCALLY' extension). If cookie auth fails, instarec will "
+            "automatically fall back to credentials.json (instagrapi). On a successful "
+            "fallback login, fresh cookies will be saved to the specified path for reuse "
+            "next time. Note: if you have an .mpd URL, you can pass it directly and no "
+            "login is required."
         ),
     )
 
