@@ -50,27 +50,42 @@ You can start a download by providing either a direct `.mpd` URL for a livestrea
 
 ### Using Instagram Usernames (Requires additional setup)
 
-To download directly from a username, you need to install an extra dependency and provide your Instagram credentials.
+To download directly from a username, you need to authenticate with Instagram. There are two methods available: cookie-based authentication and credentials-based authentication (instagrapi).
 
 > [!WARNING]
 > Instagram is known for flagging accounts that make automated requests. Continuously polling a user's live status **may get your account flagged or temporarily blocked**. Use this feature at your own risk.
 
+#### Cookie-Based Authentication
+
+This method uses cookies exported from your browser and does not require `instagrapi`.
+
+1.  **Export your Instagram cookies:**
+
+    Log into Instagram in your browser, then export your cookies as a Netscape-format `.txt` file using a browser extension such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc).
+
+2.  **Pass the cookie file with `--cookies`:**
+    ```bash
+    instarec --cookies cookies.txt <username> my_video.mkv
+    ```
+
+#### Credentials-Based Authentication (instagrapi)
+
 1.  **Install `instagrapi`:**
-    
+
     `instagrapi` is an optional dependency needed to fetch the stream URL from a username. Install it manually using pip:
     ```bash
     pip install instagrapi
     ```
 
 2.  **Configure Credentials:**
-    
+
     `instarec` needs your Instagram login to check a user's live status. Create a `credentials.json` file in the application's configuration directory with your username and password.
-    
+
     The location of this directory depends on your operating system:
     *   **Linux**: `~/.config/instarec/credentials.json`
     *   **macOS**: `~/Library/Application Support/instarec/credentials.json`
     *   **Windows**: `C:\Users\<YourUser>\AppData\Local\instarec\instarec\credentials.json`
-    
+
     The content of `credentials.json` should be:
     ```json
     {
@@ -95,6 +110,7 @@ If you prefer not to use your credentials, you can manually find the manifest UR
 | ----------------------------- | ----- | ---------------------------------------------------------------------------------------------- |
 | `url_or_username`             |       | The URL of the .mpd manifest, a raw Instagram username, or a raw instagram user ID.            |
 | `output_path`                 |       | The destination filepath for the final video. Defaults to `.mkv` if no extension is provided.  |
+| `--cookies`                   |       | Path to a Netscape-format cookie file for Instagram authentication.                            |
 | `--interactive`               | `-i`  | Interactively select video and audio quality.                                                  |
 | `--log-file`                  |       | Path to a file to write logs to.                                                               |
 | `--summary-file`              |       | Path to a file to write a download summary to.                                                 |

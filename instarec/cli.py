@@ -64,6 +64,18 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "-i", "--interactive", action="store_true", help="Interactively select video and audio quality from a list."
     )
 
+    auth_group = parser.add_argument_group("Authentication")
+    auth_group.add_argument(
+        "--cookies",
+        metavar="COOKIES_FILE",
+        help=(
+            "Path to a Netscape-format cookie file (.txt) for Instagram authentication. "
+            "Export cookies from your browser while logged into Instagram (e.g. using the "
+            "'Get cookies.txt LOCALLY' extension). This is an alternative to credentials-based "
+            "authentication with instagrapi."
+        ),
+    )
+
     log_group = parser.add_argument_group("Logging")
     log_group.add_argument("--log-file", help="Path to a file to write logs to.")
     log_group.add_argument("--summary-file", help="Path to a file to write a download summary to.")
@@ -229,15 +241,24 @@ def main_entry():
         try:
             from . import instagram  # noqa: PLC0415
 
-            if input_value.isdigit():
-                log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
-                client = instagram.InstagramClient(proxy=args.proxy)
-                mpd_url = client.get_mpd_from_user_id(input_value)
+            if args.cookies:
+                label = f"user ID '{input_value}'" if input_value.isdigit() else f"username '{input_value}'"
+                log.MAIN.info(f"Fetching live stream MPD for {label} via cookie auth...")
+                client = instagram.CookieClient(cookie_file=Path(args.cookies), proxy=args.proxy)
+                if input_value.isdigit():
+                    mpd_url = client.get_mpd_from_user_id(input_value)
+                else:
+                    mpd_url = client.get_mpd_from_username(input_value)
             else:
-                log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
-                client = instagram.InstagramClient(proxy=args.proxy)
-                mpd_url = client.get_mpd_from_username(input_value)
-        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound) as e:
+                if input_value.isdigit():
+                    log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
+                    client = instagram.InstagramClient(proxy=args.proxy)
+                    mpd_url = client.get_mpd_from_user_id(input_value)
+                else:
+                    log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
+                    client = instagram.InstagramClient(proxy=args.proxy)
+                    mpd_url = client.get_mpd_from_username(input_value)
+        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound, instagram.CookieAuthError) as e:
             log.MAIN.error(f"Error: {e}")
             sys.exit(1)
         except Exception as e:

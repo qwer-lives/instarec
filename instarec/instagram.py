@@ -1,14 +1,156 @@
 import json
+from http.cookiejar import MozillaCookieJar
+from pathlib import Path
 
+import requests
 from instagrapi import Client
 from instagrapi.exceptions import ClientNotFoundError, LoginRequired, PrivateError, UserNotFound
 from platformdirs import user_config_path
 
 from . import log
 
+# Instagram web API constants
+_IG_BASE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "x-ig-app-id": "936619743392459",
+}
+_IG_BASE_URL = "https://www.instagram.com/api/v1/"
+
 
 class UserNotLiveError(Exception):
     pass
+
+
+class CookieAuthError(Exception):
+    """Raised when cookie-based authentication fails."""
+    pass
+
+
+class CookieClient:
+    """
+    Authenticates with Instagram using a Netscape-format cookie file (.txt)
+    and queries the Instagram web API directly (no instagrapi required).
+
+    """
+
+    def __init__(self, cookie_file: str | Path, proxy: str | None = None):
+        self.cookie_file = Path(cookie_file)
+        self.proxy = proxy
+        self.session = self._build_session()
+
+    def _build_session(self) -> requests.Session:
+        """Load the Netscape cookie file and build an authenticated requests.Session."""
+        if not self.cookie_file.exists():
+            raise FileNotFoundError(
+                f"Cookie file not found: {self.cookie_file}\n"
+                "Export your Instagram cookies as a Netscape-format .txt file "
+                "(e.g. using the 'Get cookies.txt LOCALLY' browser extension) "
+                "and pass the path with --cookies."
+            )
+
+        log.API.debug(f"Loading cookies from: {self.cookie_file}")
+        jar = MozillaCookieJar(str(self.cookie_file))
+        try:
+            jar.load(ignore_discard=True, ignore_expires=True)
+        except Exception as e:
+            raise CookieAuthError(f"Could not parse cookie file '{self.cookie_file}': {e}") from e
+
+        session = requests.Session()
+        session.cookies.update(jar)
+        session.headers.update(_IG_BASE_HEADERS)
+
+        # Inject CSRF token from cookies into request headers (required by IG API)
+        csrf_token = session.cookies.get("csrftoken")
+        if csrf_token:
+            session.headers.update({"x-csrftoken": csrf_token})
+        else:
+            log.API.warning(
+                "No 'csrftoken' found in cookie file. "
+                "API calls may fail — ensure you are logged in when exporting cookies."
+            )
+
+        if self.proxy:
+            session.proxies = {"http": self.proxy, "https": self.proxy}
+            log.API.debug(f"Cookie session proxy set: {self.proxy}")
+
+        log.API.debug("Cookie session built successfully.")
+        return session
+
+    def _get(self, endpoint: str) -> dict:
+        """GET an Instagram API endpoint and return parsed JSON."""
+        url = _IG_BASE_URL + endpoint
+        log.API.debug(f"Cookie GET: {url}")
+        try:
+            resp = self.session.get(url, timeout=15)
+        except requests.RequestException as e:
+            raise CookieAuthError(f"Network error querying Instagram API: {e}") from e
+
+        if resp.status_code == 401:
+            raise CookieAuthError(
+                "Instagram returned 401 Unauthorized. "
+                "Your cookies are likely expired or invalid. "
+                "Please export fresh cookies and try again."
+            )
+        if resp.status_code == 403:
+            raise CookieAuthError(
+                "Instagram returned 403 Forbidden. "
+                "Your cookies may be invalid or your account may be restricted."
+            )
+        if resp.status_code == 404:
+            raise UserNotLiveError(
+                f"Instagram returned 404 for endpoint '{endpoint}'. "
+                "The user is likely not live."
+            )
+        if resp.status_code != 200:
+            raise CookieAuthError(
+                f"Instagram API returned unexpected status {resp.status_code} for endpoint '{endpoint}'."
+            )
+
+        # A redirect to the login page returns 200 HTML — detect it before trying JSON.
+        content_type = resp.headers.get("Content-Type", "")
+        if "text/html" in content_type or resp.text.lstrip().startswith("<!DOCTYPE"):
+            log.API.debug(f"Raw response (status {resp.status_code}): {resp.text[:500]!r}")
+            raise CookieAuthError(
+                "Instagram redirected to the login page instead of returning API data. "
+                "Your cookies are likely expired or invalid. "
+                "Please export fresh cookies and try again."
+            )
+
+        try:
+            return resp.json()
+        except ValueError as e:
+            log.API.debug(f"Raw response (status {resp.status_code}): {resp.text[:500]!r}")
+            raise CookieAuthError(f"Could not parse Instagram API response as JSON: {e}") from e
+
+    def _get_user_id_from_username(self, username: str) -> str:
+        log.API.debug(f"Resolving user ID for username: '{username}'")
+        data = self._get(f"users/web_profile_info/?username={username}")
+        user_id = data.get("data", {}).get("user", {}).get("id")
+        if not user_id:
+            raise UserNotLiveError(f"Instagram user '{username}' does not exist or could not be resolved.")
+        log.API.debug(f"Resolved '{username}' -> user ID {user_id}")
+        return user_id
+
+    def _get_mpd_for_user_id(self, user_id: str) -> str | None:
+        data = self._get(f"live/web_info/?target_user_id={user_id}")
+        return data.get("dash_abr_playback_url")
+
+    def get_mpd_from_username(self, target_username: str) -> str:
+        user_id = self._get_user_id_from_username(target_username)
+        return self.get_mpd_from_user_id(user_id, _resolved_username=target_username)
+
+    def get_mpd_from_user_id(self, user_id: str, _resolved_username: str | None = None) -> str:
+        label = f"'{_resolved_username}'" if _resolved_username else f"user ID {user_id}"
+        log.API.debug(f"Fetching live stream MPD for {label}...")
+        mpd_url = self._get_mpd_for_user_id(user_id)
+        if not mpd_url:
+            raise UserNotLiveError(f"User {label} does not appear to be live (no MPD URL returned).")
+        log.API.info(f"Found live stream for {label}: {mpd_url}")
+        return mpd_url
 
 
 class InstagramClient:
