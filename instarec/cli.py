@@ -71,11 +71,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
         help=(
             "Path to a Netscape-format cookie file (.txt) for Instagram authentication. "
             "Export cookies from your browser while logged into Instagram (e.g. using the "
-            "'Get cookies.txt LOCALLY' extension). If cookie auth fails, instarec will "
-            "automatically fall back to credentials.json (instagrapi). On a successful "
-            "fallback login, fresh cookies will be saved to the specified path for reuse "
-            "next time. Note: if you have an .mpd URL, you can pass it directly and no "
-            "login is required."
+            "'Get cookies.txt LOCALLY' extension). This is an alternative to credentials-based "
+            "authentication with instagrapi."
         ),
     )
 
@@ -243,22 +240,16 @@ def main_entry():
     else:
         try:
             from . import instagram  # noqa: PLC0415
-            from platformdirs import user_config_path  # noqa: PLC0415
-
-            config_dir = user_config_path("instarec", "instarec")
 
             if args.cookies:
-                # Cookie-based auth (preferred), with automatic fallback to instagrapi
                 label = f"user ID '{input_value}'" if input_value.isdigit() else f"username '{input_value}'"
                 log.MAIN.info(f"Fetching live stream MPD for {label} via cookie auth...")
-                mpd_url = instagram.get_mpd_with_cookie_fallback(
-                    input_value=input_value,
-                    cookie_file=Path(args.cookies),
-                    proxy=args.proxy,
-                    config_dir=config_dir,
-                )
+                client = instagram.CookieClient(cookie_file=Path(args.cookies), proxy=args.proxy)
+                if input_value.isdigit():
+                    mpd_url = client.get_mpd_from_user_id(input_value)
+                else:
+                    mpd_url = client.get_mpd_from_username(input_value)
             else:
-                # instagrapi only (credentials.json)
                 if input_value.isdigit():
                     log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
                     client = instagram.InstagramClient(proxy=args.proxy)
@@ -267,7 +258,7 @@ def main_entry():
                     log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
                     client = instagram.InstagramClient(proxy=args.proxy)
                     mpd_url = client.get_mpd_from_username(input_value)
-        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound) as e:
+        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound, instagram.CookieAuthError) as e:
             log.MAIN.error(f"Error: {e}")
             sys.exit(1)
         except Exception as e:

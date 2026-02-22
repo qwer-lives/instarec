@@ -8,7 +8,7 @@
 -   **Past and Live Recording**: Downloads both previously broadcasted segments and continues to record the livestream in real-time.
 -   **Optimized Performance**: Downloads segments efficiently and merges the final video without needing to re-encode.
 -   **Segment Loss Detection**: Can generate a summary file detailing any missing segments from the download.
--   **Flexible Usage**: Use a direct `.mpd` manifest URL, or provide an Instagram username and authenticate via browser cookies or credentials.
+-   **Flexible Usage**: Use either a direct `.mpd` manifest URL or an Instagram username to start a download.
 -   **Customizable**: Offers a wide range of command-line arguments to tailor the downloading process.
 
 ## Installation
@@ -29,27 +29,11 @@ This will install the tool and make the `instarec` command available in your ter
 
 ## Usage
 
-The simplest and most reliable way to use `instarec` is with a direct `.mpd` manifest URL. If you don't have one, `instarec` can also look it up from an Instagram username, but this requires authentication.
+You can start a download by providing either a direct `.mpd` URL for a livestream or an Instagram username.
 
-### Using an MPD URL (Recommended)
+### Basic Examples
 
-If you already have the `.mpd` manifest URL, no login or additional setup is needed — just pass it directly:
-
-```bash
-instarec <mpd_url> my_video.mkv
-```
-
-#### How to Get the MPD URL
-
-1.  Open the Instagram livestream in a web browser.
-2.  Open the **Developer Tools** (usually by pressing `F12` or `Ctrl+Shift+I`).
-3.  Go to the **Network** tab.
-4.  In the filter box, type `.mpd` to find the manifest request.
-5.  Right-click the request and copy the full URL.
-
-#### Examples
-
--   **With interactive quality selection:**
+-   **Download from an MPD URL with interactive quality selection and mux to MKV:**
     ```bash
     instarec <mpd_url> my_video.mkv -i
     ```
@@ -64,14 +48,14 @@ instarec <mpd_url> my_video.mkv
     instarec <mpd_url> my_video.mkv --video-quality <video_id> --summary-file summary.txt
     ```
 
-### Using an Instagram Username (Requires authentication)
+### Using Instagram Usernames (Requires additional setup)
 
-If you don't have the `.mpd` URL, you can provide a username or user ID instead. `instarec` will log in and look up the livestream URL for you. There are two authentication methods: **cookie-based** (recommended) and **credentials-based** (instagrapi).
+To download directly from a username, you need to authenticate with Instagram. There are two methods available: cookie-based authentication and credentials-based authentication (instagrapi).
 
 > [!WARNING]
 > Instagram is known for flagging accounts that make automated requests. Continuously polling a user's live status **may get your account flagged or temporarily blocked**. Use this feature at your own risk.
 
-#### Option A: Cookie-Based Authentication (Recommended)
+#### Cookie-Based Authentication
 
 This method uses cookies exported from your browser and does not require `instagrapi`.
 
@@ -84,9 +68,7 @@ This method uses cookies exported from your browser and does not require `instag
     instarec --cookies cookies.txt <username> my_video.mkv
     ```
 
-If cookie auth fails (e.g. expired cookies), `instarec` will automatically fall back to credentials-based auth (Option B) if configured. On a successful fallback login, fresh cookies will be saved to the specified path for reuse next time.
-
-#### Option B: Credentials-Based Authentication (instagrapi)
+#### Credentials-Based Authentication (instagrapi)
 
 1.  **Install `instagrapi`:**
 
@@ -97,7 +79,7 @@ If cookie auth fails (e.g. expired cookies), `instarec` will automatically fall 
 
 2.  **Configure Credentials:**
 
-    Create a `credentials.json` file in the application's configuration directory with your username and password.
+    `instarec` needs your Instagram login to check a user's live status. Create a `credentials.json` file in the application's configuration directory with your username and password.
 
     The location of this directory depends on your operating system:
     *   **Linux**: `~/.config/instarec/credentials.json`
@@ -111,6 +93,16 @@ If cookie auth fails (e.g. expired cookies), `instarec` will automatically fall 
       "password": "your_instagram_password"
     }
     ```
+
+### Manually Getting the MPD URL
+
+If you prefer not to use your credentials, you can manually find the manifest URL (`.mpd`):
+
+1.  Open the Instagram livestream in a web browser.
+2.  Open the **Developer Tools** (usually by pressing `F12` or `Ctrl+Shift+I`).
+3.  Go to the **Network** tab.
+4.  In the filter box, type `.mpd` to find the manifest request.
+5.  Right-click the request and copy the full URL.
 
 ### Command-Line Arguments
 

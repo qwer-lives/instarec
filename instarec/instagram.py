@@ -1,6 +1,4 @@
 import json
-import time
-import http.cookiejar
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 
@@ -42,7 +40,6 @@ class CookieClient:
     def __init__(self, cookie_file: str | Path, proxy: str | None = None):
         self.cookie_file = Path(cookie_file)
         self.proxy = proxy
-        self.config_dir = user_config_path("instarec", "instarec")
         self.session = self._build_session()
 
     def _build_session(self) -> requests.Session:
@@ -82,14 +79,6 @@ class CookieClient:
 
         log.API.debug("Cookie session built successfully.")
         return session
-
-    def _check_session_valid(self) -> bool:
-        """Quick check: verify we can hit the IG API without a 401/403."""
-        try:
-            resp = self.session.get(_IG_BASE_URL + "accounts/current_user/?edit=true", timeout=10)
-            return resp.status_code == 200
-        except requests.RequestException:
-            return False
 
     def _get(self, endpoint: str) -> dict:
         """GET an Instagram API endpoint and return parsed JSON."""
@@ -162,22 +151,6 @@ class CookieClient:
             raise UserNotLiveError(f"User {label} does not appear to be live (no MPD URL returned).")
         log.API.info(f"Found live stream for {label}: {mpd_url}")
         return mpd_url
-
-    def save_cookies_from_session(self, output_path: Path) -> None:
-        """
-        Write the current session cookies back out as a Netscape cookie file.
-        Useful after a successful instagrapi login so the cookies can be reused
-        next time without a password.
-        """
-        jar = MozillaCookieJar(str(output_path))
-        for cookie in self.session.cookies:
-            jar.set_cookie(cookie)
-        try:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            jar.save(ignore_discard=True, ignore_expires=True)
-            log.API.info(f"Saved session cookies to: {output_path}")
-        except Exception as e:
-            log.API.warning(f"Could not save cookie file: {e}")
 
 
 class InstagramClient:
@@ -275,101 +248,3 @@ class InstagramClient:
 
         log.API.info(f"Found live stream for user with ID '{user_id}': {mpd_url}")
         return mpd_url
-
-
-def get_mpd_with_cookie_fallback(
-    input_value: str,
-    cookie_file: Path,
-    proxy: str | None,
-    config_dir: Path,
-) -> str:
-    """
-    Try to get the MPD URL using cookie-based auth first.
-    If that fails, fall back to instagrapi (credentials.json).
-    On a successful instagrapi login, attempt to export fresh cookies
-    so they can be reused next time.
-
-    Args:
-        input_value:  Instagram username or numeric user ID.
-        cookie_file:  Path to a Netscape .txt cookie file.
-        proxy:        Optional proxy URL.
-        config_dir:   instarec config directory (for saving exported cookies).
-
-    Returns:
-        The MPD URL string.
-    """
-    # --- Attempt 1: cookie-based auth ---
-    log.API.info(f"Trying cookie-based authentication using: {cookie_file}")
-    try:
-        cookie_client = CookieClient(cookie_file=cookie_file, proxy=proxy)
-        if input_value.isdigit():
-            return cookie_client.get_mpd_from_user_id(input_value)
-        else:
-            return cookie_client.get_mpd_from_username(input_value)
-    except (FileNotFoundError, CookieAuthError) as e:
-        log.API.warning(f"Cookie authentication failed: {e}")
-        log.API.warning("Falling back to instagrapi (credentials.json)...")
-
-    # --- Attempt 2: instagrapi fallback ---
-    ig_client = InstagramClient(proxy=proxy)
-
-    if input_value.isdigit():
-        mpd_url = ig_client.get_mpd_from_user_id(input_value)
-    else:
-        mpd_url = ig_client.get_mpd_from_username(input_value)
-
-    # On success, export cookies so the user can skip the password next time
-    _try_export_cookies_from_instagrapi(ig_client, cookie_file, config_dir)
-
-    return mpd_url
-
-
-def _try_export_cookies_from_instagrapi(
-    ig_client: InstagramClient,
-    cookie_file: Path,
-    config_dir: Path,
-) -> None:
-    """
-    After a successful instagrapi login, attempt to export the session cookies
-    as a Netscape cookie file so they can be used for cookie-based auth next time.
-    """
-    try:
-        settings = ig_client.client.get_settings()
-        raw_cookies = settings.get("cookies", {})
-        if not raw_cookies:
-            log.API.debug("No cookies found in instagrapi session to export.")
-            return
-
-        jar = MozillaCookieJar(str(cookie_file))
-        now = int(time.time())
-        far_future = now + 60 * 60 * 24 * 365  # ~1 year
-
-        for name, value in raw_cookies.items():
-            cookie = http.cookiejar.Cookie(
-                version=0,
-                name=name,
-                value=str(value),
-                port=None,
-                port_specified=False,
-                domain=".instagram.com",
-                domain_specified=True,
-                domain_initial_dot=True,
-                path="/",
-                path_specified=True,
-                secure=True,
-                expires=far_future,
-                discard=False,
-                comment=None,
-                comment_url=None,
-                rest={},
-            )
-            jar.set_cookie(cookie)
-
-        cookie_file.parent.mkdir(parents=True, exist_ok=True)
-        jar.save(ignore_discard=True, ignore_expires=True)
-        log.API.info(
-            f"Exported session cookies to: {cookie_file}\n"
-            "These will be used automatically next time instead of your password."
-        )
-    except Exception as e:
-        log.API.debug(f"Could not export cookies from instagrapi session: {e}")
