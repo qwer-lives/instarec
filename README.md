@@ -48,9 +48,19 @@ You can start a download by providing either a direct `.mpd` URL for a livestrea
     instarec <mpd_url> my_video.mkv --video-quality <video_id> --summary-file summary.txt
     ```
 
+### Manually Getting the MPD URL
+
+You can manually find the manifest URL (`.mpd`) thourgh the browser:
+
+1.  Open the Instagram livestream in a web browser.
+2.  Open the **Developer Tools** (usually by pressing `F12` or `Ctrl+Shift+I`).
+3.  Go to the **Network** tab.
+4.  In the filter box, type `.mpd` to find the manifest request.
+5.  Right-click the request and copy the full URL.
+
 ### Using Instagram Usernames (Requires additional setup)
 
-To download directly from a username, you need to authenticate with Instagram. There are two methods available: cookie-based authentication and credentials-based authentication (instagrapi).
+To download using a username, you need to authenticate with Instagram. There are two methods available: cookie-based authentication and credentials-based authentication (`instagrapi`).
 
 > [!WARNING]
 > Instagram is known for flagging accounts that make automated requests. Continuously polling a user's live status **may get your account flagged or temporarily blocked**. Use this feature at your own risk.
@@ -93,16 +103,6 @@ This method uses cookies exported from your browser and does not require `instag
       "password": "your_instagram_password"
     }
     ```
-
-### Manually Getting the MPD URL
-
-If you prefer not to use your credentials, you can manually find the manifest URL (`.mpd`):
-
-1.  Open the Instagram livestream in a web browser.
-2.  Open the **Developer Tools** (usually by pressing `F12` or `Ctrl+Shift+I`).
-3.  Go to the **Network** tab.
-4.  In the filter box, type `.mpd` to find the manifest request.
-5.  Right-click the request and copy the full URL.
 
 ### Command-Line Arguments
 

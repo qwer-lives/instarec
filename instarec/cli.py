@@ -10,11 +10,11 @@ from tqdm import tqdm
 if __name__ == "__main__" and __package__ is None:
     project_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(project_root))
-    from instarec import cli  # noqa: PLC0415
+    from instarec import cli  # noqa: PLW0406
 
     sys.exit(cli.main_entry())
 
-from . import log
+from . import instagram, log
 from .downloader import StreamDownloader
 from .interactive import interactive_stream_selection
 
@@ -53,7 +53,10 @@ def get_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "url_or_username",
-        help="The URL of the .mpd manifest, a raw Instagram username, or a raw Instagram user ID (instagrapi is needed for usernames and IDs).",
+        help=(
+            "The URL of the .mpd manifest, a raw Instagram username, or a raw Instagram user ID "
+            "(instagrapi is needed for usernames and IDs)."
+        ),
     )
     parser.add_argument(
         "output_path",
@@ -69,10 +72,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--cookies",
         metavar="COOKIES_FILE",
         help=(
-            "Path to a Netscape-format cookie file (.txt) for Instagram authentication. "
-            "Export cookies from your browser while logged into Instagram (e.g. using the "
-            "'Get cookies.txt LOCALLY' extension). This is an alternative to credentials-based "
-            "authentication with instagrapi."
+            "Path to a Netscape-format cookie file for Instagram authentication."
+            "Alternative to authentication via instagrapi when providing a username / user ID"
         ),
     )
 
@@ -238,32 +239,23 @@ def main_entry():
     if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
         mpd_url = input_value
     else:
-        try:
-            from . import instagram  # noqa: PLC0415
-
-            if args.cookies:
-                label = f"user ID '{input_value}'" if input_value.isdigit() else f"username '{input_value}'"
-                log.MAIN.info(f"Fetching live stream MPD for {label} via cookie auth...")
-                client = instagram.CookieClient(cookie_file=Path(args.cookies), proxy=args.proxy)
-                if input_value.isdigit():
-                    mpd_url = client.get_mpd_from_user_id(input_value)
-                else:
-                    mpd_url = client.get_mpd_from_username(input_value)
-            else:
-                if input_value.isdigit():
-                    log.MAIN.info(f"User ID '{input_value}' detected. Attempting to fetch live stream MPD...")
-                    client = instagram.InstagramClient(proxy=args.proxy)
-                    mpd_url = client.get_mpd_from_user_id(input_value)
-                else:
-                    log.MAIN.info(f"Username '{input_value}' detected. Attempting to fetch live stream MPD...")
-                    client = instagram.InstagramClient(proxy=args.proxy)
-                    mpd_url = client.get_mpd_from_username(input_value)
-        except (FileNotFoundError, ValueError, instagram.UserNotLiveError, instagram.UserNotFound, instagram.CookieAuthError) as e:
-            log.MAIN.error(f"Error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            log.MAIN.error(f"An unexpected error occurred during Instagram lookup: {e}")
-            sys.exit(1)
+        if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
+            mpd_url = input_value
+        else:
+            try:
+                mpd_url = asyncio.run(instagram.get_mpd(input_value, cookie_file=args.cookies, proxy=args.proxy))
+            except (instagram.UserNotLiveError, instagram.UserNotFound) as e:
+                log.MAIN.error(f"Not Found error: {e}")
+                sys.exit(1)
+            except instagram.AuthError as e:
+                log.MAIN.error(f"Authentication error: {e}")
+                sys.exit(1)
+            except ImportError as e:
+                log.MAIN.error(str(e))
+                sys.exit(1)
+            except Exception as e:
+                log.MAIN.error(f"Unexpected error: {e}")
+                sys.exit(1)
 
     if args.interactive:
         try:
