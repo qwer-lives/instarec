@@ -18,6 +18,7 @@ BASE_HEADERS = {
 
 USER_API_URL = "https://www.instagram.com/web/search/topsearch/?query={username}"
 LIVE_API_URL = "https://www.instagram.com/api/v1/live/web_info/?target_user_id={user_id}"
+STORY_FEED_URL = "https://www.instagram.com/api/v1/feed/user/{user_id}/story/"
 REELS_TRAY_URL = "https://www.instagram.com/api/v1/live/reels_tray_broadcasts/"
 
 
@@ -117,6 +118,22 @@ class CookieClient:
                     if mpd_url := host_data.get("dash_abr_playback_url"):
                         log.API.info(f"Found MPD via co-broadcast host {host_username}: {mpd_url}")
                         return mpd_url
+
+            # Try the user's story feed — Instagram includes a "broadcast"
+            # field when the user is in any live broadcast (host or guest).
+            # Unlike the reels tray this works for any user, not just followed accounts.
+            log.API.debug(f"Checking story feed for {identifier}'s broadcast...")
+            try:
+                story_data = await self._get(session, STORY_FEED_URL.format(user_id=identifier))
+                broadcast = story_data.get("broadcast")
+                if broadcast:
+                    if mpd_url := broadcast.get("dash_abr_playback_url"):
+                        host = broadcast.get("broadcast_owner", {})
+                        host_username = host.get("username", identifier)
+                        log.API.info(f"Found broadcast via story feed (host: {host_username}): {mpd_url}")
+                        return mpd_url
+            except (UserNotLiveError, AuthError, InstagramError):
+                log.API.debug("Story feed lookup failed.")
 
             # Last resort: search the reels tray for the user appearing as a
             # co-broadcaster in someone else's active broadcast.

@@ -149,6 +149,26 @@ class CredentialsClient:
                     log.API.info(f"Found MPD via co-broadcast host {host_username}: {mpd_url}")
                     return mpd_url
 
+        # Try the user's story feed — Instagram includes a "broadcast"
+        # field when the user is in any live broadcast (host or guest).
+        # Unlike the reels tray this works for any user, not just followed accounts.
+        log.API.debug(f"Checking story feed for {identifier}'s broadcast...")
+        try:
+            story_data = self._private_request_with_retry(
+                f"feed/user/{identifier}/story/",
+                f"Retrying story feed for '{identifier}'...",
+                f"Story feed for '{identifier}' not available",
+            )
+            broadcast = story_data.get("broadcast")
+            if broadcast:
+                if mpd_url := broadcast.get("dash_abr_playback_url"):
+                    host = broadcast.get("broadcast_owner", {})
+                    host_username = host.get("username", identifier)
+                    log.API.info(f"Found broadcast via story feed (host: {host_username}): {mpd_url}")
+                    return mpd_url
+        except Exception:
+            log.API.debug("Story feed lookup failed.")
+
         # Last resort: search the reels tray for the user appearing as a
         # co-broadcaster in someone else's active broadcast.
         # Note: limited to broadcasts by accounts the authenticated user follows.
