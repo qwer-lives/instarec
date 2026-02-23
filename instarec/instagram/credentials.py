@@ -120,4 +120,26 @@ class CredentialsClient:
         if mpd_url := live_data.get("dash_abr_playback_url"):
             log.API.info(f"Found MPD for {identifier}: {mpd_url}")
             return mpd_url
+
+        # The user may be a guest in a co-broadcast hosted by someone else.
+        # In that case the response won't have an MPD URL but may contain
+        # broadcast_owner pointing to the actual host.
+        broadcast_owner = live_data.get("broadcast_owner")
+        if broadcast_owner:
+            host_id = str(broadcast_owner.get("pk", ""))
+            if host_id and host_id != str(identifier):
+                host_username = broadcast_owner.get("username", host_id)
+                log.API.info(
+                    f"{identifier} is a guest in a co-broadcast hosted by {host_username}. "
+                    f"Fetching host's broadcast..."
+                )
+                host_data = self._private_request_with_retry(
+                    f"live/web_info/?target_user_id={host_id}",
+                    f"Retrying MPD fetch for co-broadcast host '{host_id}'...",
+                    f"Co-broadcast host '{host_id}' not found or not currently live",
+                )
+                if mpd_url := host_data.get("dash_abr_playback_url"):
+                    log.API.info(f"Found MPD via co-broadcast host {host_username}: {mpd_url}")
+                    return mpd_url
+
         raise UserNotLiveError(f"{identifier} is not currently live.")
