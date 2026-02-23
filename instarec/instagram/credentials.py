@@ -112,18 +112,25 @@ class CredentialsClient:
             identifier = user_data.get("user", {}).get("pk")
 
         log.API.debug(f"Checking live status for {identifier}...")
-        live_data = self._private_request_with_retry(
-            f"live/web_info/?target_user_id={identifier}",
-            f"Retrying MPD fetch for '{identifier}'...",
-            f"User '{identifier}' not found or not currently live",
-        )
+        # A 404 (raised as UserNotFound by instagrapi) means the user isn't
+        # hosting a broadcast; catch it so we can still try co-broadcast fallbacks.
+        # We know the user exists at this point, so UserNotFound here means "not live".
+        try:
+            live_data = self._private_request_with_retry(
+                f"live/web_info/?target_user_id={identifier}",
+                f"Retrying MPD fetch for '{identifier}'...",
+                f"User '{identifier}' not found or not currently live",
+            )
+        except UserNotFound:
+            live_data = {}
+
         if mpd_url := live_data.get("dash_abr_playback_url"):
             log.API.info(f"Found MPD for {identifier}: {mpd_url}")
             return mpd_url
 
         # The user may be a guest in a co-broadcast hosted by someone else.
-        # In that case the response won't have an MPD URL but may contain
-        # broadcast_owner pointing to the actual host.
+        # Some API versions return the host's broadcast object even when
+        # querying a guest; check broadcast_owner for that case.
         broadcast_owner = live_data.get("broadcast_owner")
         if broadcast_owner:
             host_id = str(broadcast_owner.get("pk", ""))
@@ -141,5 +148,39 @@ class CredentialsClient:
                 if mpd_url := host_data.get("dash_abr_playback_url"):
                     log.API.info(f"Found MPD via co-broadcast host {host_username}: {mpd_url}")
                     return mpd_url
+
+        # Last resort: search the reels tray for the user appearing as a
+        # co-broadcaster in someone else's active broadcast.
+        # Note: limited to broadcasts by accounts the authenticated user follows.
+        log.API.debug(f"Searching reels tray for {identifier} as a co-broadcaster...")
+        try:
+            reels_data = self._private_request_with_retry(
+                "live/reels_tray_broadcasts/",
+                "Retrying reels tray fetch...",
+                "Could not access reels tray",
+            )
+            for broadcast in reels_data.get("broadcasts", []):
+                for co in broadcast.get("cobroadcasters", []):
+                    if str(co.get("pk", "")) == str(identifier):
+                        host = broadcast.get("broadcast_owner", {})
+                        host_id = str(host.get("pk", ""))
+                        host_username = host.get("username", host_id)
+                        log.API.info(
+                            f"Found {identifier} as guest in {host_username}'s broadcast. "
+                            f"Fetching host's broadcast..."
+                        )
+                        if mpd_url := broadcast.get("dash_abr_playback_url"):
+                            log.API.info(f"Found MPD via reels tray host {host_username}: {mpd_url}")
+                            return mpd_url
+                        host_data = self._private_request_with_retry(
+                            f"live/web_info/?target_user_id={host_id}",
+                            f"Retrying MPD fetch for reels tray host '{host_id}'...",
+                            f"Reels tray host '{host_id}' not found or not currently live",
+                        )
+                        if mpd_url := host_data.get("dash_abr_playback_url"):
+                            log.API.info(f"Found MPD via reels tray host {host_username}: {mpd_url}")
+                            return mpd_url
+        except Exception:
+            log.API.debug("Reels tray lookup failed.")
 
         raise UserNotLiveError(f"{identifier} is not currently live.")

@@ -18,6 +18,7 @@ BASE_HEADERS = {
 
 USER_API_URL = "https://www.instagram.com/web/search/topsearch/?query={username}"
 LIVE_API_URL = "https://www.instagram.com/api/v1/live/web_info/?target_user_id={user_id}"
+REELS_TRAY_URL = "https://www.instagram.com/api/v1/live/reels_tray_broadcasts/"
 
 
 class CookieClient:
@@ -89,14 +90,20 @@ class CookieClient:
                 identifier = user_id
 
             log.API.info(f"Checking live status for {identifier}...")
-            live_data = await self._get(session, LIVE_API_URL.format(user_id=identifier))
+            # A 404 means the user isn't hosting a broadcast; catch it so we can
+            # still attempt the co-broadcast fallbacks below.
+            try:
+                live_data = await self._get(session, LIVE_API_URL.format(user_id=identifier))
+            except UserNotLiveError:
+                live_data = {}
+
             if mpd_url := live_data.get("dash_abr_playback_url"):
                 log.API.info(f"Found MPD for {identifier}: {mpd_url}")
                 return mpd_url
 
             # The user may be a guest in a co-broadcast hosted by someone else.
-            # In that case the response won't have an MPD URL but may contain
-            # broadcast_owner pointing to the actual host.
+            # Some API versions return the host's broadcast object even when
+            # querying a guest; check broadcast_owner for that case.
             broadcast_owner = live_data.get("broadcast_owner")
             if broadcast_owner:
                 host_id = str(broadcast_owner.get("pk", ""))
@@ -110,5 +117,31 @@ class CookieClient:
                     if mpd_url := host_data.get("dash_abr_playback_url"):
                         log.API.info(f"Found MPD via co-broadcast host {host_username}: {mpd_url}")
                         return mpd_url
+
+            # Last resort: search the reels tray for the user appearing as a
+            # co-broadcaster in someone else's active broadcast.
+            # Note: limited to broadcasts by accounts the authenticated user follows.
+            log.API.debug(f"Searching reels tray for {identifier} as a co-broadcaster...")
+            try:
+                reels_data = await self._get(session, REELS_TRAY_URL)
+                for broadcast in reels_data.get("broadcasts", []):
+                    for co in broadcast.get("cobroadcasters", []):
+                        if str(co.get("pk", "")) == str(identifier):
+                            host = broadcast.get("broadcast_owner", {})
+                            host_id = str(host.get("pk", ""))
+                            host_username = host.get("username", host_id)
+                            log.API.info(
+                                f"Found {identifier} as guest in {host_username}'s broadcast. "
+                                f"Fetching host's broadcast..."
+                            )
+                            if mpd_url := broadcast.get("dash_abr_playback_url"):
+                                log.API.info(f"Found MPD via reels tray host {host_username}: {mpd_url}")
+                                return mpd_url
+                            host_data = await self._get(session, LIVE_API_URL.format(user_id=host_id))
+                            if mpd_url := host_data.get("dash_abr_playback_url"):
+                                log.API.info(f"Found MPD via reels tray host {host_username}: {mpd_url}")
+                                return mpd_url
+            except (UserNotLiveError, AuthError, InstagramError):
+                log.API.debug("Reels tray lookup failed.")
 
             raise UserNotLiveError(f"{identifier} is not currently live.")
