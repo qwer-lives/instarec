@@ -3,10 +3,29 @@ on:
   release:
     types: [published]
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pytest
+      - name: Smoke test CLI
+        run: instarec --help
+      - name: Run pytest
+        run: pytest tests/
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Mandatory for trusted publishing
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
