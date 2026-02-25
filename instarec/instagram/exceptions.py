@@ -6,7 +6,7 @@ class UserNotLiveError(InstagramError):
     """Raised when the user is found but is not currently live."""
 
 
-class UserNotFound(InstagramError):
+class UserNotFoundError(InstagramError):
     """Raised when the username or user ID cannot be resolved."""
 
 

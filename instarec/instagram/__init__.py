@@ -1,16 +1,17 @@
+from .client import InstagramClient
 from .cookies import CookieClient
 from .exceptions import *
 
-async def get_mpd(identifier: str, cookie_file: str | None = None, proxy: str | None = None) -> str:
+
+def get_client(cookie_file: str | None = None, proxy: str | None = None) -> InstagramClient:
     if cookie_file:
-        client = CookieClient(cookie_file, proxy=proxy)
-        return await client.get_mpd(identifier)
-    
+        return CookieClient(cookie_file, proxy=proxy)
+
     try:
-        from .credentials import CredentialsClient  # noqa: F401
-        client = CredentialsClient(proxy=proxy)
-        return client.get_mpd(identifier)
+        from .credentials import CredentialsClient
+
+        return CredentialsClient(proxy=proxy)
     except ImportError:
         raise MissingDependencyError("instagrapi is required for username/password authentication")
 
-__all__ = ["get_mpd", "InstagramClient", "AuthError", "InstagramError", "MissingDependencyError", "UserNotFound", "UserNotLiveError"]
+__all__ = ["get_client", "InstagramClient", "AuthError", "InstagramError", "MissingDependencyError", "UserNotFoundError", "UserNotLiveError"]

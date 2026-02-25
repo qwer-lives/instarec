@@ -223,6 +223,11 @@ async def main(args: argparse.Namespace) -> None:
     await downloader.run()
 
 
+async def resolve_mpd_url(identifier: str, cookie_file: str | None, proxy: str | None) -> str:
+    async with instagram.get_client(cookie_file=cookie_file, proxy=proxy) as client:
+        return await client.get_mpd(identifier)
+
+
 def main_entry():
     parser = get_argument_parser()
     args = parser.parse_args()
@@ -239,23 +244,20 @@ def main_entry():
     if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
         mpd_url = input_value
     else:
-        if "live-dash" in input_value.lower() and ".mpd" in input_value.lower():
-            mpd_url = input_value
-        else:
-            try:
-                mpd_url = asyncio.run(instagram.get_mpd(input_value, cookie_file=args.cookies, proxy=args.proxy))
-            except (instagram.UserNotLiveError, instagram.UserNotFound) as e:
-                log.MAIN.error(f"Not Found error: {e}")
-                sys.exit(1)
-            except instagram.AuthError as e:
-                log.MAIN.error(f"Authentication error: {e}")
-                sys.exit(1)
-            except ImportError as e:
-                log.MAIN.error(str(e))
-                sys.exit(1)
-            except Exception as e:
-                log.MAIN.error(f"Unexpected error: {e}")
-                sys.exit(1)
+        try:
+            mpd_url = asyncio.run(resolve_mpd_url(input_value, args.cookies, args.proxy))
+        except (instagram.UserNotLiveError, instagram.UserNotFoundError) as e:
+            log.MAIN.error(f"Not Found error: {e}")
+            sys.exit(1)
+        except instagram.AuthError as e:
+            log.MAIN.error(f"Authentication error: {e}")
+            sys.exit(1)
+        except ImportError as e:
+            log.MAIN.error(str(e))
+            sys.exit(1)
+        except Exception as e:
+            log.MAIN.error(f"Unexpected error: {e}")
+            sys.exit(1)
 
     if args.interactive:
         try:

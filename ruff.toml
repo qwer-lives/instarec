@@ -25,11 +25,7 @@ exclude = [
     "dist",
     "node_modules",
     "site-packages",
-    "venv",
-    "streamlink",
     "__init__.py",
-    "af_password.py",
-    "migrate_db.py",
 ]
 
 line-length = 120
@@ -83,6 +79,9 @@ fixable = ["ALL"]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "S607", "PLW1510"]
 
 [format]
 
