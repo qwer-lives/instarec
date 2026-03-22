@@ -20,40 +20,37 @@ async def poll_live_manifest(downloader: "StreamDownloader"):
             downloader.session, downloader.mpd_url, downloader.download_retries, downloader.download_retry_delay
         )
 
+        if root is not None:
+            timeline = root.find(".//mpd:SegmentTimeline", namespaces=mpd.NS)
+            if timeline is not None:
+                found_new_segment = False
+                for segment in timeline.findall("mpd:S", namespaces=mpd.NS):
+                    t = int(segment.get("t", 0))
+                    if t >= downloader.stream_info["initial_t"] and t not in queued_live_timestamps:
+                        found_new_segment = True
+                        queued_live_timestamps.add(t)
+                        await downloader.live_download_queue.put(t)
+
+                if found_new_segment:
+                    last_new_segment_time = asyncio.get_running_loop().time()
+                elif last_new_segment_time is not None:
+                    time_since_last_segment = asyncio.get_running_loop().time() - last_new_segment_time
+                    if time_since_last_segment > downloader.live_end_timeout:
+                        log.LIVE_POLL.info(
+                            f"No new segments for {time_since_last_segment:.2f}s. "
+                            "Assuming stream has ended. Shutting down live poller."
+                        )
+                        await downloader.live_download_queue.put(None)
+                        break
+        elif not is_ended:
+            log.LIVE_POLL.warning("Failed to fetch or parse live manifest, continuing...")
+
         if is_ended:
             log.LIVE_POLL.info(
                 "Stream has ended (detected 'x-fb-video-broadcast-ended' header). Shutting down live poller."
             )
             await downloader.live_download_queue.put(None)
             break
-
-        if root is None:
-            log.LIVE_POLL.warning("Failed to fetch or parse live manifest, continuing...")
-            continue
-
-        timeline = root.find(".//mpd:SegmentTimeline", namespaces=mpd.NS)
-        if timeline is None:
-            continue
-
-        found_new_segment = False
-        for segment in timeline.findall("mpd:S", namespaces=mpd.NS):
-            t = int(segment.get("t", 0))
-            if t >= downloader.stream_info["initial_t"] and t not in queued_live_timestamps:
-                found_new_segment = True
-                queued_live_timestamps.add(t)
-                await downloader.live_download_queue.put(t)
-
-        if found_new_segment:
-            last_new_segment_time = asyncio.get_running_loop().time()
-        elif last_new_segment_time is not None:
-            time_since_last_segment = asyncio.get_running_loop().time() - last_new_segment_time
-            if time_since_last_segment > downloader.live_end_timeout:
-                log.LIVE_POLL.info(
-                    f"No new segments for {time_since_last_segment:.2f}s. "
-                    "Assuming stream has ended. Shutting down live poller."
-                )
-                await downloader.live_download_queue.put(None)
-                break
 
 
 async def process_live_downloads(downloader: "StreamDownloader"):
