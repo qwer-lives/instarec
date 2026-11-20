@@ -1,3 +1,5 @@
+import json
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -84,3 +86,42 @@ def create_korean_summary_file(downloader: "StreamDownloader"):
     log.SUMMARY.info(f"Generating Korean summary file at: {downloader.summary_file_korean_path}")
     content = _generate_summary_content(downloader, "ko")
     _write_summary(downloader.summary_file_korean_path, content)
+
+
+def _track_summary(name: str, results: list[tuple[int, bool]], bytes_written: int) -> dict:
+    ordered = sorted(results)
+    missing = [index for index, (_, ok) in enumerate(ordered) if not ok]
+    ranges: list[list[int]] = []
+    for index in missing:
+        if ranges and ranges[-1][1] == index - 1:
+            ranges[-1][1] = index
+        else:
+            ranges.append([index, index])
+    return {
+        "name": name,
+        "bytes": bytes_written,
+        "expected": len(ordered),
+        "written": len(ordered) - len(missing),
+        "missing_ranges": ranges,
+        "first_t": ordered[0][0] if ordered else None,
+        "last_t": ordered[-1][0] if ordered else None,
+    }
+
+
+def create_json_summary(downloader: "StreamDownloader"):
+    log.SUMMARY.info(f"Generating JSON summary file at: {downloader.summary_json_path}")
+    summary = {
+        "version": 1,
+        "output": downloader.output_path.name,
+        "started_at": downloader.started_at,
+        "ended_at": time.time(),
+        "representations": {
+            kind: downloader.stream_info.get(kind, {}).get("attributes", {}) for kind in ("video", "audio")
+        },
+        "tracks": [
+            _track_summary(name, downloader.segment_results[name], downloader.bytes_written[name])
+            for name in ("past", "live")
+        ],
+        "merge": downloader.merge_result,
+    }
+    _write_summary(downloader.summary_json_path, [json.dumps(summary, ensure_ascii=False, indent=1)])

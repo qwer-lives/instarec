@@ -121,6 +121,7 @@ This method uses session cookies exported from your browser and does not require
 | `--log-file`             |       | Path to a file to write logs to.                                                              |
 | `--summary-file`         |       | Path to a file to write a download summary to.                                                |
 | `--summary-file-korean`  |       | Path to a file to write a Korean download summary to.                                         |
+| `--summary-json`         |       | Path to a JSON file with machine-readable stats (per-track segments and bytes, merge result). |
 | `--verbose`              | `-v`  | Enable verbose (`DEBUG` level) logging.                                                       |
 | `--quiet`                | `-q`  | Suppress informational (`INFO` level) logging.                                                |
 | `--video-quality`        |       | One or more representation IDs for video, in order of preference.                             |

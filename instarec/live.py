@@ -74,7 +74,7 @@ async def process_live_downloads(downloader: "StreamDownloader"):
 
             downloader.total_expected_segments += 1
             was_successful = await io.download_and_append_segment(
-                downloader, timestamp, downloader.video_live_path, downloader.audio_live_path, log.LIVE_DL
+                downloader, timestamp, "live", downloader.video_live_path, downloader.audio_live_path, log.LIVE_DL
             )
             if was_successful:
                 if downloader.first_segment_t is None or timestamp < downloader.first_segment_t:

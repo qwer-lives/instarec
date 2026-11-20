@@ -44,6 +44,14 @@ async def fetch_and_parse_mpd(
         return None, is_ended
 
 
+VIDEO_ATTRIBUTES = ("id", "width", "height", "frameRate", "bandwidth", "codecs")
+AUDIO_ATTRIBUTES = ("id", "audioSamplingRate", "bandwidth", "codecs")
+
+
+def _representation_attributes(rep: etree._Element, names: tuple[str, ...]) -> dict[str, str]:
+    return {name: value for name in names if (value := rep.get(name)) is not None}
+
+
 def parse_initial_stream_info(
     root: etree._Element, preferred_video_ids: list[str] | None, preferred_audio_ids: list[str] | None
 ) -> dict[str, Any]:
@@ -61,8 +69,16 @@ def parse_initial_stream_info(
         raise ValueError("Could not find any segments in the MPD.")
 
     return {
-        "video": {"init": video_template.get("initialization"), "media": video_template.get("media")},
-        "audio": {"init": audio_template.get("initialization"), "media": audio_template.get("media")},
+        "video": {
+            "init": video_template.get("initialization"),
+            "media": video_template.get("media"),
+            "attributes": _representation_attributes(video_rep, VIDEO_ATTRIBUTES),
+        },
+        "audio": {
+            "init": audio_template.get("initialization"),
+            "media": audio_template.get("media"),
+            "attributes": _representation_attributes(audio_rep, AUDIO_ATTRIBUTES),
+        },
         "publish_frame_time": publish_frame_time,
         "initial_t": int(last_segment.get("t", 0)),
     }

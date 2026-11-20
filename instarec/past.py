@@ -91,7 +91,7 @@ async def download_past_segments(downloader: "StreamDownloader"):
             downloader.total_expected_segments += 1
 
             was_successful = await io.download_and_append_segment(
-                downloader, current_t, downloader.video_past_path, downloader.audio_past_path, log.PAST
+                downloader, current_t, "past", downloader.video_past_path, downloader.audio_past_path, log.PAST
             )
             if was_successful:
                 if downloader.first_segment_t is None or current_t < downloader.first_segment_t:

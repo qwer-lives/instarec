@@ -60,6 +60,7 @@ async def download_file(downloader: "StreamDownloader", url: str, path: Path, lo
 async def download_and_append_segment(
     downloader: "StreamDownloader",
     timestamp: int,
+    track: str,
     video_path: Path,
     audio_path: Path,
     log: logging.LoggerAdapter,
@@ -84,6 +85,9 @@ async def download_and_append_segment(
             await f_vid.write(video_content)
         async with aiofiles.open(audio_path, "ab") as f_aud:
             await f_aud.write(audio_content)
+        downloader.bytes_written[track] += len(video_content) + len(audio_content)
+        downloader.segment_results[track].append((timestamp, True))
         return True
     log.warning(f"Failed to download one or both segments for t={timestamp}")
+    downloader.segment_results[track].append((timestamp, False))
     return False
